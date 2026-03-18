@@ -533,11 +533,34 @@ async def process_text_message(
             await message.answer(f"❌ Ошибка: `{error_text[:200]}`", parse_mode=ParseMode.MARKDOWN)
 
 
+# ──────────────────── Context Sync Cron ───────────────
+
+async def context_sync_cron():
+    """Run context sync every 6 hours."""
+    import context_sync
+    while True:
+        try:
+            await context_sync.run_sync()
+        except Exception as e:
+            logger.error(f"Context sync error: {e}")
+        await asyncio.sleep(6 * 3600)  # Every 6 hours
+
+
 # ──────────────────── Main ────────────────────────────
 
 async def main():
     logger.info("Initializing database...")
     await db.init_db()
+
+    # Initial context sync
+    try:
+        import context_sync
+        await context_sync.run_sync()
+    except Exception as e:
+        logger.warning(f"Initial context sync failed (non-critical): {e}")
+
+    # Start background context sync
+    asyncio.create_task(context_sync_cron())
 
     logger.info("Starting bot...")
     await dp.start_polling(bot)

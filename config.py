@@ -30,6 +30,11 @@ VERCEL_TOKEN = os.getenv("VERCEL_TOKEN", "")
 # === Database ===
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# External databases (for live context sync)
+DIGEST_DATABASE_URL = os.getenv("DIGEST_DATABASE_URL", "")   # telegram-digest
+CRM_DATABASE_URL = os.getenv("CRM_DATABASE_URL", "")         # zbs-crm-bot
+OPP_DATABASE_URL = os.getenv("OPP_DATABASE_URL", "")
+
 # === Models available ===
 MODELS = {
     "sonnet": "claude-sonnet-4-20250514",

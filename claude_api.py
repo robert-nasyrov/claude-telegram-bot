@@ -123,11 +123,13 @@ async def chat(
     attachments: list = None,
     enable_web_search: bool = True,
     status_callback=None,
+    auto_model: bool = True,
 ) -> tuple[str, int, int]:
     """
     Send message to Claude API and get response.
     Supports tool use loop — Claude can call n8n/web tools multiple times.
     status_callback: async function(str) to send status updates to user.
+    auto_model: if True, auto-switch between Haiku and Sonnet.
     Returns: (response_text, input_tokens, output_tokens)
     """
     # Save user message to DB
@@ -149,14 +151,33 @@ async def chat(
     history = await db.get_conversation_messages(conversation.id)
     api_messages = build_messages_for_api(history)
 
-    # System prompt
+    # System prompt + live context
     system_prompt = config.SYSTEM_PROMPTS.get(
         conversation.system_prompt_key,
         config.SYSTEM_PROMPTS["default"]
     )
 
-    # Tools
-    tools = get_tools(enable_web_search=enable_web_search)
+    # Append live context from synced databases
+    try:
+        from context_sync import load_live_context
+        live_ctx = await load_live_context()
+        if live_ctx:
+            system_prompt += "\n" + live_ctx
+    except Exception:
+        pass  # Live context is optional
+
+    # Auto model routing
+    model = conversation.model
+    if auto_model and model == config.MODELS.get("sonnet"):
+        from model_router import should_use_sonnet
+        if not should_use_sonnet(user_message) and not attachments:
+            model = config.MODELS.get("haiku", model)
+
+    # Tools — only provide tools when using Sonnet/Opus (Haiku doesn't need them for simple queries)
+    if model == config.MODELS.get("haiku"):
+        tools = []  # Haiku = simple query, no tools
+    else:
+        tools = get_tools(enable_web_search=enable_web_search)
 
     total_input_tokens = 0
     total_output_tokens = 0
@@ -165,7 +186,7 @@ async def chat(
     try:
         for loop_i in range(max_tool_loops):
             kwargs = {
-                "model": conversation.model,
+                "model": model,
                 "max_tokens": config.MAX_OUTPUT_TOKENS,
                 "system": system_prompt,
                 "messages": api_messages,
@@ -260,7 +281,7 @@ async def chat(
                 # Log usage
                 await db.log_usage(
                     user_id=conversation.user_id,
-                    model=conversation.model,
+                    model=model,
                     input_tokens=total_input_tokens,
                     output_tokens=total_output_tokens,
                 )
