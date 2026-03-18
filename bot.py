@@ -33,6 +33,42 @@ def is_owner(message: Message) -> bool:
     return message.from_user.id == config.OWNER_ID
 
 
+# Global auth middleware — blocks everything before it reaches any handler
+@router.message()
+async def _auth_guard(message: Message):
+    """Catch-all: if a message reaches here, it wasn't handled by any command/filter above."""
+    pass
+
+
+from aiogram import BaseMiddleware
+from typing import Callable, Dict, Any, Awaitable
+
+class AuthMiddleware(BaseMiddleware):
+    """Block ALL messages from non-owners at the middleware level.
+    No handler code runs, no data leaks, no tool calls."""
+
+    async def __call__(
+        self,
+        handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
+        event: Message,
+        data: Dict[str, Any],
+    ) -> Any:
+        user = event.from_user
+        if not user or user.id != config.OWNER_ID:
+            # Log unauthorized attempt
+            username = user.username if user else "unknown"
+            uid = user.id if user else 0
+            logger.warning(f"⛔ Unauthorized access attempt: @{username} (ID: {uid})")
+            # Silent ignore — don't even confirm bot exists
+            return
+        return await handler(event, data)
+
+
+# Apply middleware to router
+router.message.middleware(AuthMiddleware())
+router.callback_query.middleware(AuthMiddleware())
+
+
 # ──────────────────────── Helpers ─────────────────────
 
 def split_message(text: str, limit: int = config.TG_MSG_LIMIT) -> list[str]:
