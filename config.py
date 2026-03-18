@@ -52,6 +52,14 @@ TG_FORMAT_RULES = (
     "- Get to the point immediately. No preamble, no 'Great question!'.\n"
     "- When showing data, use compact format. No verbose explanations.\n"
     "- Respond in the same language the user writes in.\n"
+    "\nCRITICAL SAFETY RULE — CONFIRMATION BEFORE ANY CHANGES:\n"
+    "Before calling ANY tool that MODIFIES something (activate, deactivate, execute, update, "
+    "redeploy, or any write operation), you MUST:\n"
+    "1. Explain in plain simple language what you are about to do\n"
+    "2. List the specific action and target (workflow name, service name, etc)\n"
+    "3. Ask for explicit confirmation: 'Подтверждаешь?'\n"
+    "4. Only proceed AFTER user confirms with 'да', 'ок', 'подтверждаю', 'go', 'yes'\n"
+    "READ-ONLY tools (list, get, search) do NOT require confirmation — use them freely.\n"
 )
 
 # Import Robert's full context
