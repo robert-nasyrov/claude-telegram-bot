@@ -82,6 +82,21 @@ Cheers контракт не продлён.
 ▸ Vercel (статические сайты)
 ▸ git config: user "ZBS Bot" / robot@zbs.media
 
+═══ ГЛОБАЛЬНЫЙ ПРОФИЛЬ (для позиционирования на мировом рынке) ═══
+
+Уникальная комбинация: медиа-оператор + AI system builder. Не программист, а человек который понимает контент, аудиторию и дистрибуцию И может собрать production-ready AI workflow.
+
+Факты для резюме/питча:
+▸ Построил AI-инфраструктуру для медиа-компании с 0: auto-posting, CRM, news parsing, revenue scanning — всё в продакшне на Railway
+▸ Работает remote на LATAM рынок из Ташкента — AI chatbot для рекрутинговой платформы TrabajaYa (Гватемала, Karakoram startup, $850/мес part-time)
+▸ Управляет командой 15+ человек, медиа-холдинг с 83K+ Instagram аудиторией
+▸ n8n workflows для CV Builder, WhatsApp интеграции, автоматизации HR-процессов
+▸ Claude API, Telegram Bot API, Instagram Graph API, PostgreSQL, Railway, Vercel — рабочий стек
+▸ Русский (native), English (working), понимание узбекского рынка
+▸ LinkedIn активен, 3 поста/неделю с AI-тематикой — через LinkedIn пришёл текущий international клиент
+
+Позиционирование: "AI-native media operator" — использует AI не как инструмент, а как фундамент бизнес-процессов. Продаёт не часы работы, а результат на основе AI.
+
 ═══ КЛЮЧЕВЫЕ ПРИНЦИПЫ ═══
 
 ▸ Монетарная мотивация — задачи должны иметь прямое финансовое обоснование
