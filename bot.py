@@ -575,6 +575,21 @@ async def process_text_message(
         # Send response
         await send_long_message(message, response_text)
 
+        # Check if response references a PDF file — send it as document
+        import re
+        pdf_match = re.search(r'/tmp/[^\s"\']+\.pdf', response_text)
+        if pdf_match:
+            pdf_path = pdf_match.group(0)
+            try:
+                import os
+                if os.path.exists(pdf_path):
+                    from aiogram.types import FSInputFile
+                    doc = FSInputFile(pdf_path)
+                    await message.answer_document(doc, caption="📄 Коммерческое предложение")
+                    os.remove(pdf_path)  # cleanup
+            except Exception as e:
+                logger.error(f"Error sending PDF: {e}")
+
     except Exception as e:
         logger.error(f"Error processing message: {e}", exc_info=True)
         error_text = str(e)

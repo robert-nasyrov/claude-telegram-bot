@@ -20,6 +20,7 @@ SONNET_TRIGGERS = {
     "план", "plan", "анализ", "analysis", "отчёт", "report",
     "оплат", "заплатил", "получил", "выручк", "доход", "money",
     "revenue", "payment", "$", "долл", "сум",
+    "кп", "предложение", "proposal", "pdf", "коммерческ", "прайс",
     # Creative / long form
     "сценарий", "script", "напиши текст", "write", "статья", "article",
     "пост", "контент", "content",

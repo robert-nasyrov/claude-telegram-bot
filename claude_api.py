@@ -105,8 +105,12 @@ def get_tools(enable_web_search: bool = True, enable_n8n: bool = True) -> list[d
                 tools.append(tool)
 
     # Revenue tools — always available
-    from revenue import REVENUE_TOOLS
+    from revenue_tools import REVENUE_TOOLS
     tools.extend(REVENUE_TOOLS)
+
+    # Proposal/КП tools — always available
+    from proposal_tools import PROPOSAL_TOOLS
+    tools.extend(PROPOSAL_TOOLS)
 
     return tools
 
@@ -120,7 +124,10 @@ async def _execute_tool_call(tool_name: str, tool_input: dict) -> str:
         from devops_tools import execute_tool
         return await execute_tool(tool_name, tool_input)
     if tool_name.startswith("revenue_"):
-        from revenue import execute_tool
+        from revenue_tools import execute_tool
+        return await execute_tool(tool_name, tool_input)
+    if tool_name == "generate_proposal_pdf":
+        from proposal_tools import execute_tool
         return await execute_tool(tool_name, tool_input)
     return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
@@ -253,6 +260,8 @@ async def chat(
                             elif block.name.startswith("revenue_"):
                                 tool_label = block.name.replace("revenue_", "").replace("_", " ")
                                 await status_callback(f"💰 {tool_label}...")
+                            elif block.name == "generate_proposal_pdf":
+                                await status_callback(f"📄 Генерирую PDF...")
 
                         result = await _execute_tool_call(block.name, block.input)
 
