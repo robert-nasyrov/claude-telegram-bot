@@ -155,14 +155,22 @@ def build_pdf(p: dict) -> bytes:
             pdf.set_font(F, "", 9)
             pdf.set_text_color(80, 80, 80)
             pdf.multi_cell(0, 5, pk.get("description", ""))
+            pdf.ln(1)
             pf = pk.get("price_from", pk.get("price", 0))
             pt = pk.get("price_to", 0)
             sv = pk.get("savings", "")
-            pdf.set_font(F, "B", 10)
-            pdf.set_text_color(39, 174, 96)
-            txt = f"${pf:,} – ${pt:,}" if pt > pf else f"от ${pf:,}" if pf else ""
-            if sv: txt += f"  ({sv})"
-            if txt: pdf.cell(0, 8, txt, new_x="LMARGIN", new_y="NEXT")
+            parts = []
+            if pt > pf:
+                parts.append(f"${pf:,} – ${pt:,}")
+            elif pf:
+                parts.append(f"от ${pf:,}")
+            if sv:
+                parts.append(sv)
+            if parts:
+                pdf.set_font(F, "B", 10)
+                pdf.set_text_color(39, 174, 96)
+                pdf.set_x(10)
+                pdf.cell(190, 8, "  ".join(parts), new_x="LMARGIN", new_y="NEXT", align="L")
             pdf.ln(3)
 
     # Conditions
