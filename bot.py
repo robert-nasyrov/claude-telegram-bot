@@ -371,6 +371,39 @@ async def cmd_goals(message: Message):
     await send_long_message(message, text)
 
 
+@router.message(Command("kp"))
+async def cmd_kp(message: Message):
+    """Generate a commercial proposal PDF."""
+    if not is_owner(message):
+        return
+
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.answer(
+            "📄 Отправь запрос клиента после /kp\n\n"
+            "Пример:\n"
+            "/kp Citynet, ищут подрядчика на видеопродакшн: новости, обзор объекта, репортаж с мероприятия\n\n"
+            "Или просто перешли сообщение клиента и напиши: составь КП по этому запросу"
+        )
+        return
+
+    await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
+
+    try:
+        import proposal
+        pdf_bytes, data = await proposal.generate_proposal(args[1])
+
+        client_name = data.get("client_company", "client")
+        filename = f"KP_{client_name.replace(' ', '_')}_{__import__('datetime').date.today().strftime('%d%m%Y')}.pdf"
+
+        doc = BufferedInputFile(pdf_bytes, filename=filename)
+        await message.answer_document(doc, caption=f"📄 КП для {client_name}")
+
+    except Exception as e:
+        logger.error(f"Proposal generation error: {e}", exc_info=True)
+        await message.answer(f"❌ Ошибка генерации КП: {str(e)[:200]}")
+
+
 @router.message(Command("history"))
 async def cmd_history(message: Message):
     if not is_owner(message):
@@ -564,7 +597,7 @@ async def process_text_message(
 
     try:
         # Keep typing indicator alive during API call
-        response_text, in_tok, out_tok = await claude_api.chat(
+        response_text, in_tok, out_tok, pending_files = await claude_api.chat(
             conversation=conv,
             user_message=text,
             attachments=attachments,
@@ -572,23 +605,19 @@ async def process_text_message(
             status_callback=status_cb,
         )
 
-        # Send response
+        # Send response text
         await send_long_message(message, response_text)
 
-        # Check if response references a PDF file — send it as document
-        import re
-        pdf_match = re.search(r'/tmp/[^\s"\']+\.pdf', response_text)
-        if pdf_match:
-            pdf_path = pdf_match.group(0)
-            try:
-                import os
-                if os.path.exists(pdf_path):
-                    from aiogram.types import FSInputFile
-                    doc = FSInputFile(pdf_path)
-                    await message.answer_document(doc, caption="📄 Коммерческое предложение")
-                    os.remove(pdf_path)  # cleanup
-            except Exception as e:
-                logger.error(f"Error sending PDF: {e}")
+        # Send any generated files (PDFs etc)
+        if pending_files:
+            import base64 as b64mod
+            for file_info in pending_files:
+                try:
+                    file_bytes = b64mod.b64decode(file_info["data"])
+                    doc = BufferedInputFile(file_bytes, filename=file_info["filename"])
+                    await message.answer_document(doc, caption=f"📄 {file_info['filename']}")
+                except Exception as e:
+                    logger.error(f"Error sending file: {e}")
 
     except Exception as e:
         logger.error(f"Error processing message: {e}", exc_info=True)
