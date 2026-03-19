@@ -118,22 +118,28 @@ def build_pdf(p: dict) -> bytes:
         pdf.set_font(F, "B", 9)
         pdf.set_fill_color(41, 128, 185)
         pdf.set_text_color(255, 255, 255)
-        pdf.cell(45, 8, "  Услуга", fill=True)
-        pdf.cell(80, 8, "  Описание", fill=True)
-        pdf.cell(65, 8, "  Стоимость", fill=True, new_x="LMARGIN", new_y="NEXT")
-        # Rows
-        pdf.set_font(F, "", 9)
+        pdf.cell(120, 8, "  Услуга", fill=True)
+        pdf.cell(70, 8, "  Стоимость (USD)", fill=True, new_x="LMARGIN", new_y="NEXT")
+        # Rows — name + price on line 1, description on line 2
         for i, s in enumerate(svcs):
             bg = i % 2 == 0
             if bg: pdf.set_fill_color(240, 245, 250)
-            pdf.set_text_color(50, 50, 50)
             pf, pt = s.get("price_from", 0), s.get("price_to", 0)
-            ps = f"${pf:,}–{pt:,}" if pt > pf else f"${pf:,}"
+            ps = f"${pf:,} – {pt:,}" if pt > pf else f"${pf:,}"
             u = s.get("unit", "")
             if u: ps += f" {u}"
-            pdf.cell(45, 8, f"  {s.get('name','')[:22]}", fill=bg)
-            pdf.cell(80, 8, f"  {s.get('description','')[:42]}", fill=bg)
-            pdf.cell(65, 8, f"  {ps}", fill=bg, new_x="LMARGIN", new_y="NEXT")
+            # Line 1: name + price
+            pdf.set_font(F, "B", 9)
+            pdf.set_text_color(50, 50, 50)
+            pdf.cell(120, 7, f"  {s.get('name','')}", fill=bg)
+            pdf.cell(70, 7, f"  {ps}", fill=bg, new_x="LMARGIN", new_y="NEXT")
+            # Line 2: description
+            desc = s.get("description", "")
+            if desc:
+                pdf.set_font(F, "", 8)
+                pdf.set_text_color(120, 120, 120)
+                pdf.cell(120, 5, f"  {desc[:65]}", fill=bg)
+                pdf.cell(70, 5, "", fill=bg, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
 
     # Packages
@@ -154,7 +160,7 @@ def build_pdf(p: dict) -> bytes:
             sv = pk.get("savings", "")
             pdf.set_font(F, "B", 11)
             pdf.set_text_color(39, 174, 96)
-            txt = f"${pf:,}–{pt:,}" if pt > pf else f"от ${pf:,}" if pf else ""
+            txt = f"${pf:,} – {pt:,}" if pt > pf else f"от ${pf:,}" if pf else ""
             if sv: txt += f"  ({sv})"
             if txt: pdf.cell(0, 7, txt, new_x="LMARGIN", new_y="NEXT")
             pdf.ln(3)
