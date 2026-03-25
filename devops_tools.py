@@ -299,14 +299,20 @@ async def _gh_get_file(params: dict) -> str:
         return json.dumps(result)
 
     if isinstance(result, dict) and result.get("content"):
+        file_size = result.get("size", 0)
+        if file_size > 1_000_000:  # 1MB limit
+            return json.dumps({
+                "path": path,
+                "size": file_size,
+                "error": f"File too large ({file_size:,} bytes). Max 1MB.",
+            }, ensure_ascii=False)
         import base64
         content = base64.b64decode(result["content"]).decode("utf-8", errors="replace")
-        # Truncate if too long
         if len(content) > 8000:
             content = content[:8000] + "\n\n... [TRUNCATED — file too long]"
         return json.dumps({
             "path": path,
-            "size": result.get("size"),
+            "size": file_size,
             "content": content,
         }, ensure_ascii=False)
 

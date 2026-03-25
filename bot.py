@@ -627,7 +627,7 @@ async def process_text_message(
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
 
     conv = await db.get_or_create_conversation(message.from_user.id)
-    search_on = web_search_enabled.get(message.from_user.id, True)
+    search_on = web_search_enabled.get(message.from_user.id, False)
 
     # Status callback for tool use updates
     async def status_cb(status_text: str):
@@ -679,13 +679,17 @@ async def process_text_message(
 # ──────────────────── Context Sync Cron ───────────────
 
 async def context_sync_cron():
-    """Run context sync every 6 hours."""
+    """Run context sync every 6 hours with retry on failure."""
     import context_sync
     while True:
-        try:
-            await context_sync.run_sync()
-        except Exception as e:
-            logger.error(f"Context sync error: {e}")
+        for attempt in range(3):
+            try:
+                await context_sync.run_sync()
+                break  # Success — exit retry loop
+            except Exception as e:
+                logger.error(f"Context sync error (attempt {attempt+1}/3): {e}")
+                if attempt < 2:
+                    await asyncio.sleep(60 * (attempt + 1))  # 1min, 2min
         await asyncio.sleep(6 * 3600)  # Every 6 hours
 
 

@@ -3,6 +3,7 @@ n8n integration via Claude Tool Use.
 Claude decides when to call n8n API based on user's natural language requests.
 """
 
+import asyncio
 import logging
 import json
 from typing import Any
@@ -200,20 +201,39 @@ async def _n8n_request(
         "Accept": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.request(
-            method=method,
-            url=url,
-            headers=headers,
-            json=json_data,
-            params=params,
-        )
+    last_error = None
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=json_data,
+                    params=params,
+                )
 
-        if response.status_code >= 400:
-            logger.error(f"n8n API error: {response.status_code} {response.text[:500]}")
-            return {"error": f"n8n API returned {response.status_code}: {response.text[:300]}"}
+                if response.status_code >= 500:
+                    last_error = f"n8n API {response.status_code}: {response.text[:300]}"
+                    logger.warning(f"n8n API error (attempt {attempt+1}/3): {last_error}")
+                    await asyncio.sleep(2 ** attempt)
+                    continue
 
-        return response.json()
+                if response.status_code >= 400:
+                    logger.error(f"n8n API error: {response.status_code} {response.text[:500]}")
+                    return {"error": f"n8n API returned {response.status_code}: {response.text[:300]}"}
+
+                return response.json()
+        except httpx.TimeoutException:
+            last_error = f"n8n API timeout (attempt {attempt+1}/3)"
+            logger.warning(last_error)
+            await asyncio.sleep(2 ** attempt)
+        except httpx.ConnectError as e:
+            last_error = f"n8n API connection error: {e}"
+            logger.warning(f"{last_error} (attempt {attempt+1}/3)")
+            await asyncio.sleep(2 ** attempt)
+
+    return {"error": last_error or "n8n API request failed after 3 attempts"}
 
 
 # ──────────────────── Tool Executors ──────────────────
