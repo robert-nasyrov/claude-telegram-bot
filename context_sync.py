@@ -39,26 +39,26 @@ async def sync_digest_context() -> str:
 
     # Last 3 daily summaries
     rows = await _safe_query(url, """
-        SELECT plan_date, summary 
-        FROM daily_summaries 
-        ORDER BY plan_date DESC LIMIT 3
+        SELECT date, summary
+        FROM daily_summaries
+        ORDER BY date DESC LIMIT 3
     """, "digest-summaries")
 
     # Open items
     items = await _safe_query(url, """
-        SELECT item, status, source 
-        FROM open_items 
+        SELECT what, status, project
+        FROM open_items
         WHERE status != 'done'
-        ORDER BY created_at DESC LIMIT 10
+        ORDER BY last_seen DESC LIMIT 10
     """, "digest-items")
 
     parts = []
     if rows:
         latest = rows[0]
         summary = str(latest.get("summary", ""))[:500]
-        parts.append(f"Последний дайджест ({latest.get('plan_date', '?')}): {summary}")
+        parts.append(f"Последний дайджест ({latest.get('date', '?')}): {summary}")
     if items:
-        item_list = "; ".join(f"{i['item'][:60]} [{i.get('status','?')}]" for i in items[:5])
+        item_list = "; ".join(f"{i['what'][:60]} [{i.get('status','?')}]" for i in items[:5])
         parts.append(f"Открытые задачи: {item_list}")
 
     return "\n".join(parts)
@@ -70,26 +70,28 @@ async def sync_crm_context() -> str:
     if not url:
         return ""
 
-    # Upcoming tasks/events
+    # Upcoming tasks/events (join users to get assignee name)
     tasks = await _safe_query(url, """
-        SELECT title, deadline, status, assigned_to
-        FROM tasks
-        WHERE status NOT IN ('DONE', 'CANCELLED')
-        ORDER BY deadline ASC NULLS LAST
+        SELECT t.title, t.deadline, t.status, u.full_name as assignee
+        FROM tasks t
+        LEFT JOIN users u ON t.assignee_id = u.id
+        WHERE t.status NOT IN ('DONE', 'CANCELLED')
+        ORDER BY t.deadline ASC NULLS LAST
         LIMIT 10
     """, "crm-tasks")
 
-    # Recent finance entries
+    # Recent finances
     finance = await _safe_query(url, """
-        SELECT description, amount, currency, created_at
-        FROM finance_entries
-        ORDER BY created_at DESC LIMIT 5
+        SELECT description, amount, currency, record_date
+        FROM finances
+        ORDER BY record_date DESC NULLS LAST, created_at DESC
+        LIMIT 5
     """, "crm-finance")
 
     parts = []
     if tasks:
         task_list = "; ".join(
-            f"{t['title'][:40]} → {t.get('assigned_to', '?')} [{t.get('status', '?')}]"
+            f"{t['title'][:40]} → {t.get('assignee', '?')} [{t.get('status', '?')}]"
             for t in tasks[:7]
         )
         parts.append(f"Задачи CRM: {task_list}")
@@ -111,7 +113,7 @@ async def sync_opportunities_context() -> str:
 
     # Top opportunities
     opps = await _safe_query(url, """
-        SELECT title, client, revenue_low, revenue_high, confidence, priority, status
+        SELECT title, contact_person, revenue_low, revenue_high, confidence, priority, status
         FROM opportunities
         WHERE status NOT IN ('rejected', 'done')
         ORDER BY priority ASC, confidence DESC
@@ -128,7 +130,7 @@ async def sync_opportunities_context() -> str:
     parts = []
     if opps:
         opp_list = "; ".join(
-            f"{o['title'][:40]} ({o.get('client', '?')}) ${o.get('revenue_low', '?')}-{o.get('revenue_high', '?')} [{o.get('status', '?')}]"
+            f"{o['title'][:40]} ({o.get('contact_person', '?')}) ${o.get('revenue_low', '?')}-{o.get('revenue_high', '?')} [{o.get('status', '?')}]"
             for o in opps[:5]
         )
         parts.append(f"Топ возможности: {opp_list}")
